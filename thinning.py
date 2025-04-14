@@ -51,7 +51,8 @@ def visualizeSkeleton(skeleton, voxel_size=0.005):
 
 def main():
     # Load mesh
-    pathToMesh = "assets/harness.obj"
+    #pathToMesh = "assets/harness.obj"
+    mesh = o3d.data.BunnyMesh()
     mesh = o3d.io.read_triangle_mesh(pathToMesh)
     
     voxels = voxelizeMesh(mesh)
