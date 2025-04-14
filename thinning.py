@@ -1,6 +1,6 @@
 import numpy as np
 import open3d as o3d
-from skimage.morphology import medial_axis, skeletonize
+from skimage.morphology import skeletonize
 
 """ voxelizes the mesh and normalizes it to a unit cube via open3d """
 def voxelizeMesh(mesh, voxel_size=0.005):
