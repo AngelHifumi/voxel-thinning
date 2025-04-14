@@ -7,7 +7,7 @@ def voxelizeMesh(mesh, voxel_size=0.005):
 
     # Normalize mesh
     mesh.scale(1 / np.max(mesh.get_max_bound() - mesh.get_min_bound()), center=mesh.get_center())
-    # Voxelize
+    # Use open3d to voxelize the mesh
     voxel_grid = o3d.geometry.VoxelGrid.create_from_triangle_mesh(mesh, voxel_size=voxel_size)
 
 
@@ -51,17 +51,27 @@ def visualizeSkeleton(skeleton, voxel_size=0.005):
 
 def main():
     # Load mesh
+    bunny = o3d.data.BunnyMesh()
     #pathToMesh = "assets/harness.obj"
-    mesh = o3d.data.BunnyMesh()
+    pathToMesh = bunny.path
     mesh = o3d.io.read_triangle_mesh(pathToMesh)
+    # An important parameter, if chosen too high, the resulting skeleton will have a point cloud representation
+    # The ideal shape of skeleton has to be thin and connected via edges from the control points
+    # Using the value of 0.005 results in a volumentric skelet of a standford bunny which is not what you usually want from a thinning algorithm
+    voxelSize = 0.005
     
-    voxels = voxelizeMesh(mesh)
+    voxels = voxelizeMesh(mesh, voxelSize)
     # Perform thinning on the voxelized object
     thinned_voxels = thinning(voxels)
 
     # Visualize the skeleton
     pcd = visualizeSkeleton(thinned_voxels)
-    # Optional: draw skeleton over original mesh
+    #Fix: draw skeleton over original mesh and not next to it
     mesh.paint_uniform_color([0.8, 0.8, 0.8])
     pcd.paint_uniform_color([1, 0, 0])
     o3d.visualization.draw_geometries([voxels, pcd])
+
+
+
+if __name__ == "__main__":
+    main()
