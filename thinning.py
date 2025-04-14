@@ -1,9 +1,9 @@
 import numpy as np
 import open3d as o3d
 from skimage.morphology import skeletonize
-
+from skan.csr import skeleton_to_csgraph, Skeleton
 """ voxelizes the mesh and normalizes it to a unit cube via open3d """
-def voxelizeMesh(mesh, voxel_size=0.005):
+def voxelize_mesh(mesh, voxel_size=0.005):
 
     # Normalize mesh
     mesh.scale(1 / np.max(mesh.get_max_bound() - mesh.get_min_bound()), center=mesh.get_center())
@@ -38,7 +38,37 @@ def thinning(voxels):
     return skeleton
 
 
-def visualizeSkeleton(skeleton, voxel_size=0.005):
+""" TODO: extract centerlines from a thinn sheets of a skeleton as a graph"""
+def visualize_centerlines(skeleton):
+    skeleton_graph = Skeleton(skeleton)
+    paths = skeleton_graph.paths_list()
+    shape = skeleton.shape
+
+    points = []
+    lines = []
+    offset = 0
+
+    for path in paths:
+        coords_zyx = np.array(np.unravel_index(path, shape)).T
+        coords_xyz = coords_zyx[:, [2, 1, 0]]
+
+        points.extend(coords_xyz)
+
+        # Create line segments between consecutive points
+        lines.extend([[i + offset, i + 1 + offset] for i in range(len(coords_xyz) - 1)])
+        offset += len(coords_xyz)
+
+    line_set = o3d.geometry.LineSet()
+    line_set.points = o3d.utility.Vector3dVector(np.array(points))
+    line_set.lines = o3d.utility.Vector2iVector(np.array(lines))
+
+    color = [1.0, 0.2, 0.2]  # red-ish
+    line_set.colors = o3d.utility.Vector3dVector([color] * len(lines))
+
+    return line_set
+
+
+def visualize_skeleton(skeleton, voxel_size=0.005):
     # Visualize slices or point cloud of skeleton
     skeleton_points = np.argwhere(skeleton)
 
@@ -53,23 +83,26 @@ def main():
     # Load mesh
     bunny = o3d.data.BunnyMesh()
     #pathToMesh = "assets/harness.obj"
-    pathToMesh = bunny.path
-    mesh = o3d.io.read_triangle_mesh(pathToMesh)
+    path_to_mesh = bunny.path
+    mesh = o3d.io.read_triangle_mesh(path_to_mesh)
     # An important parameter, if chosen too high, the resulting skeleton will have a point cloud representation
     # The ideal shape of skeleton has to be thin and connected via edges from the control points
-    # Using the value of 0.005 results in a volumentric skelet of a standford bunny which is not what you usually want from a thinning algorithm
-    voxelSize = 0.005
+    # Using the value of 0.005 results in a volumetric skeleton of a standford bunny which is not what you usually want from a thinning algorithm
+    voxel_size = 0.005
     
-    voxels = voxelizeMesh(mesh, voxelSize)
+    voxels = voxelize_mesh(mesh, voxel_size)
     # Perform thinning on the voxelized object
     thinned_voxels = thinning(voxels)
 
+    # Actual centerlines
+    center_lines = visualize_centerlines(thinned_voxels)
+
     # Visualize the skeleton
-    pcd = visualizeSkeleton(thinned_voxels)
+    pcd = visualize_skeleton(thinned_voxels)
     #Fix: draw skeleton over original mesh and not next to it
     mesh.paint_uniform_color([0.8, 0.8, 0.8])
     pcd.paint_uniform_color([1, 0, 0])
-    o3d.visualization.draw_geometries([voxels, pcd])
+    o3d.visualization.draw_geometries([voxels, pcd, center_lines])
 
 
 

@@ -1,3 +1,5 @@
 open3d
 numpy
 scikit-image
+skan
+scipy
